@@ -322,3 +322,9 @@ if st.session_state.results:
 
 else:
     st.info("Click 'Run Analysis' after entering all required inputs.")
+
+# --- Footer ---
+st.divider()
+current_year = datetime.datetime.now().year
+st.caption(f"© {current_year} [ABS Energy Analytics Lab: Dr. Chenxi Ji]. All rights reserved.") # Replace placeholder
+st.caption("Calculations based on user inputs and predefined factors. Verify external data sources.")
