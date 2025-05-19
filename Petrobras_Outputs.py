@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 import math
 import datetime
-from decimal import Decimal # For potential future formatting needs
 
 # --- 1. SET PAGE CONFIG (MUST BE FIRST STREAMLIT COMMAND) ---
 st.set_page_config(layout="wide")
@@ -11,77 +10,36 @@ st.set_page_config(layout="wide")
 # --- Configuration ---
 YEAR_OPTIONS = [2030, 2040, 2050]
 MILLION = 1_000_000
-
+# ... (Paste all your other config dictionaries: TANKER_ROUTES, OWNED_SHIP_CATEGORIES_BY_YEAR, ALL_CHARTER_FACTORS,
+#      DEFAULT_INPUTS_2030, DEFAULT_INPUTS_2040, DEFAULT_INPUTS_2050, ALL_YEAR_DEFAULT_INPUTS,
+#      EMPTY_ROUTE_DEFAULTS, BENCHMARK_2024, FUEL_MIX_CATEGORIES_FOR_COST_INPUT,
+#      DEFAULT_SIDEBAR_FUEL_MIX_PERCENTAGES, DEFAULT_FUEL_COSTS_GJ_FOR_APP, PLACEHOLDER_TOTAL_FLEET_GJ_CONSUMPTION)
 TANKER_ROUTES = {
-    "vlcc_china": "VLCC (to China)",
-    "suez_seasia": "Suezmax (to SE Asia)",
-    "suez_sing": "Suezmax (to Singapore)",
-    "afra_europe": "Aframax (to Europe)",
-    "pana_houston": "Panamax (to Houston)",
-    "mr_ny": "MR Tankers (to New York)"
+    "vlcc_china": "VLCC (to China)", "suez_seasia": "Suezmax (to SE Asia)",
+    "suez_sing": "Suezmax (to Singapore)", "afra_europe": "Aframax (to Europe)",
+    "pana_houston": "Panamax (to Houston)", "mr_ny": "MR Tankers (to New York)"
 }
 ROUTE_KEYS = list(TANKER_ROUTES.keys())
-
-# --- Year-Dependent Owned Ship Categories ---
 OWNED_SHIP_CATEGORIES_BY_YEAR = {
     2030: ["Diesel Ships", "B30 Ships", "Methanol Ships", "Ammonia Ships", "B30 EET Ships"],
     2040: ["Diesel Ships", "B50 Ships", "Methanol Ships", "Ammonia Ships", "BlueH2 Ships", "Methane Ships", "VLSFO OCCS Ships", "B50 EET Ships"],
     2050: ["Diesel Ships", "B100 Ships", "Methanol Ships", "Ammonia Ships", "eH2 Ships", "eMethane Ships", "eDiesel Ships", "B100 EET Ships", "Bio Methane Ships"]
 }
-
-# Helper to create empty owned_ships dict for a given year's categories
 def get_empty_owned_ships_dict_for_year(year):
     categories = OWNED_SHIP_CATEGORIES_BY_YEAR.get(year, [])
     return {cat.lower().replace(' ', '_').replace('(','').replace(')',''): 0 for cat in categories}
-
-# Charter Cost Factors
 ALL_CHARTER_FACTORS = {
     2030: {"vlcc_china": {"m1": 4.5, "m2": 6.96}, "suez_seasia": {"m1": 5.8, "m2": 4.66}, "suez_sing": {"m1": 5.8, "m2": 4.66}, "afra_europe": {"m1": 9.2, "m2": 3.68}, "pana_houston": {"m1": 11.4, "m2": 2.63}, "mr_ny": {"m1": 10.5, "m2": 2.25}},
     2040: {"vlcc_china": {"m1": 4.5, "m2": 7.24}, "suez_seasia": {"m1": 5.8, "m2": 4.84}, "suez_sing": {"m1": 5.8, "m2": 4.84}, "afra_europe": {"m1": 9.2, "m2": 3.83}, "pana_houston": {"m1": 11.4, "m2": 2.74}, "mr_ny": {"m1": 10.5, "m2": 2.34}},
     2050: {"vlcc_china": {"m1": 4.5, "m2": 7.52}, "suez_seasia": {"m1": 5.8, "m2": 5.03}, "suez_sing": {"m1": 5.8, "m2": 5.03}, "afra_europe": {"m1": 9.2, "m2": 3.98}, "pana_houston": {"m1": 11.4, "m2": 2.85}, "mr_ny": {"m1": 10.5, "m2": 2.43}}
 }
-
-# --- Default Input Values by Year (Comprehensive) ---
-DEFAULT_INPUTS_2030 = {
-    "vlcc_china":   {"owned_ships": {"diesel_ships": 4, "b30_ships": 14, "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 538.21,    "ghg": 1.69,     "charter": 12},
-    "suez_seasia":  {"owned_ships": {"diesel_ships": 2, "b30_ships": 7,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 174.7,     "ghg": 0.4,      "charter": 6},
-    "suez_sing":    {"owned_ships": {"diesel_ships": 6, "b30_ships": 14, "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 384.93,    "ghg": 0.91,     "charter": 0},
-    "afra_europe":  {"owned_ships": {"diesel_ships": 5, "b30_ships": 0,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 52.4165,   "ghg": 0.2437,   "charter": 28},
-    "pana_houston": {"owned_ships": {"diesel_ships": 1, "b30_ships": 0,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 8.79673,   "ghg": 0.04292,  "charter": 8},
-    "mr_ny":        {"owned_ships": {"diesel_ships": 4, "b30_ships": 0,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 31.0053,   "ghg": 0.12959,  "charter": 21}
-}
-
-# *** ENSURING THESE ARE FULLY DEFINED ***
-DEFAULT_INPUTS_2040 = {
-    "vlcc_china":   {"owned_ships": {"diesel_ships": 4, "b50_ships": 1, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships": 0, "methane_ships": 0, "vlsfo_occs_ships":0, "b50_eet_ships":0}, "tco": 848.85, "ghg": 0.64, "charter": 5},
-    "suez_seasia":  {"owned_ships": {"diesel_ships": 2, "b50_ships": 2, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships":0, "methane_ships":13, "vlsfo_occs_ships":0, "b50_eet_ships":0 }, "tco": 357.2, "ghg": 0.2, "charter": 2},
-    "suez_sing":    {"owned_ships": {"diesel_ships": 0, "b50_ships": 8, "methanol_ships": 2, "ammonia_ships": 0, "blueh2_ships":0, "methane_ships":7, "vlsfo_occs_ships":0, "b50_eet_ships":0 }, "tco": 500.31, "ghg": 0.27, "charter": 4},
-    "afra_europe":  {"owned_ships": {"diesel_ships": 5, "b50_ships": 0, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships":0, "methane_ships":0, "vlsfo_occs_ships":0, "b50_eet_ships":0 }, "tco": 81.69102, "ghg": 0.239923,"charter": 18},
-    "pana_houston": {"owned_ships": get_empty_owned_ships_dict_for_year(2040), "tco": 0.0, "ghg": 0.0, "charter": 7},
-    "mr_ny":        {"owned_ships": get_empty_owned_ships_dict_for_year(2040), "tco": 0.0, "ghg": 0.0, "charter": 22}
-}
-
-DEFAULT_INPUTS_2050 = {
-    "vlcc_china":   {"owned_ships": {"diesel_ships":0, "b100_ships":0, "methanol_ships":0, "ammonia_ships":18, "eh2_ships":0, "emethane_ships":0, "ediesel_ships":0, "b100_eet_ships":0, "bio_methane_ships":0}, "tco": 960.76, "ghg": 0.02376, "charter": 1},
-    "suez_seasia":  {"owned_ships": {"diesel_ships":0, "b100_ships":8, "methanol_ships":0, "ammonia_ships":4, "eh2_ships":0, "emethane_ships":0, "ediesel_ships":0, "b100_eet_ships":0, "bio_methane_ships":0}, "tco": 555.78, "ghg": 0.01877, "charter": 1},
-    "suez_sing":    {"owned_ships": {"diesel_ships":0, "b100_ships":12, "methanol_ships":0, "ammonia_ships":5, "eh2_ships":0, "emethane_ships":0, "ediesel_ships":0, "b100_eet_ships":0, "bio_methane_ships":0}, "tco": 780.3, "ghg": 0.02754, "charter": 3},
-    "afra_europe":  {"owned_ships": get_empty_owned_ships_dict_for_year(2050), "tco": 0.0, "ghg": 0.0, "charter": 18},
-    "pana_houston": {"owned_ships": get_empty_owned_ships_dict_for_year(2050), "tco": 0.0, "ghg": 0.0, "charter": 6},
-    "mr_ny":        {"owned_ships": get_empty_owned_ships_dict_for_year(2050), "tco": 0.0, "ghg": 0.0, "charter": 20}
-}
-# ************************************
-
-ALL_YEAR_DEFAULT_INPUTS = {
-    2030: DEFAULT_INPUTS_2030,
-    2040: DEFAULT_INPUTS_2040,
-    2050: DEFAULT_INPUTS_2050
-}
+DEFAULT_INPUTS_2030 = {"vlcc_china":   {"owned_ships": {"diesel_ships": 4, "b30_ships": 14, "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 538.21,    "ghg": 1.69,     "charter": 12, "total_fuel_cost_route": 291.8803459},    "suez_seasia":  {"owned_ships": {"diesel_ships": 2, "b30_ships": 7,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 174.7,     "ghg": 0.4,      "charter": 6,  "total_fuel_cost_route": 68.43707857},    "suez_sing":    {"owned_ships": {"diesel_ships": 10, "b30_ships": 8, "methanol_ships": 2, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 402.75,    "ghg": 0.91,     "charter": 0,  "total_fuel_cost_route": 172.0750921},    "afra_europe":  {"owned_ships": {"diesel_ships": 5, "b30_ships": 0,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 52.4165,   "ghg": 0.2437,   "charter": 28, "total_fuel_cost_route": 28.750511},    "pana_houston": {"owned_ships": {"diesel_ships": 1, "b30_ships": 0,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 8.79673,   "ghg": 0.04292,  "charter": 8,  "total_fuel_cost_route": 5.251384651},    "mr_ny":        {"owned_ships": {"diesel_ships": 4, "b30_ships": 0,  "methanol_ships": 0, "ammonia_ships": 0, "b30_eet_ships": 0}, "tco": 31.0053,   "ghg": 0.12959,  "charter": 21, "total_fuel_cost_route": 16.41581277}}
+DEFAULT_INPUTS_2040 = {"vlcc_china":   {"owned_ships": {"diesel_ships": 4, "b50_ships": 1, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships": 0, "methane_ships": 0, "vlsfo_occs_ships":0, "b50_eet_ships":0}, "tco": 848.85, "ghg": 0.64, "charter": 5, "total_fuel_cost_route": 427.8787256},    "suez_seasia":  {"owned_ships": {"diesel_ships": 2, "b50_ships": 2, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships":0, "methane_ships":13, "vlsfo_occs_ships":0, "b50_eet_ships":0 }, "tco": 357.2, "ghg": 0.2, "charter": 2, "total_fuel_cost_route": 128.0633766},    "suez_sing":    {"owned_ships": {"diesel_ships": 0, "b50_ships": 8, "methanol_ships": 2, "ammonia_ships": 0, "blueh2_ships":0, "methane_ships":7, "vlsfo_occs_ships":0, "b50_eet_ships":0 }, "tco": 500.31, "ghg": 0.27, "charter": 4, "total_fuel_cost_route": 168.5662639},    "afra_europe":  {"owned_ships": {"diesel_ships": 5, "b50_ships": 0, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships":0, "methane_ships":0, "vlsfo_occs_ships":0, "b50_eet_ships":0 }, "tco": 81.69102,  "ghg": 0.239923,"charter": 18, "total_fuel_cost_route": 26.05253146},    "pana_houston": {"owned_ships": get_empty_owned_ships_dict_for_year(2040), "tco": 0.0, "ghg": 0.0, "charter": 7, "total_fuel_cost_route": 0.0},    "mr_ny":        {"owned_ships": get_empty_owned_ships_dict_for_year(2040), "tco": 0.0, "ghg": 0.0, "charter": 22, "total_fuel_cost_route": 0.0}}
+DEFAULT_INPUTS_2050 = {"vlcc_china":   {"owned_ships": {"diesel_ships":0, "b100_ships":0, "methanol_ships":0, "ammonia_ships":18, "eh2_ships":0, "emethane_ships":0, "ediesel_ships":0, "b100_eet_ships":0, "bio_methane_ships":0}, "tco": 960.76, "ghg": 0.02376, "charter": 1, "total_fuel_cost_route": 696.2729488},    "suez_seasia":  {"owned_ships": {"diesel_ships":0, "b100_ships":8, "methanol_ships":0, "ammonia_ships":4, "eh2_ships":0, "emethane_ships":0, "ediesel_ships":0, "b100_eet_ships":0, "bio_methane_ships":0}, "tco": 555.78, "ghg": 0.01877, "charter": 1, "total_fuel_cost_route": 150.5271399},    "suez_sing":    {"owned_ships": {"diesel_ships":0, "b100_ships":12, "methanol_ships":0, "ammonia_ships":5, "eh2_ships":0, "emethane_ships":0, "ediesel_ships":0, "b100_eet_ships":0, "bio_methane_ships":0}, "tco": 780.3, "ghg": 0.02754, "charter": 3, "total_fuel_cost_route": 207.6813632},    "afra_europe":  {"owned_ships": get_empty_owned_ships_dict_for_year(2050), "tco": 0.0, "ghg": 0.0, "charter": 18, "total_fuel_cost_route": 0.0},    "pana_houston": {"owned_ships": get_empty_owned_ships_dict_for_year(2050), "tco": 0.0, "ghg": 0.0, "charter": 6, "total_fuel_cost_route": 0.0},    "mr_ny":        {"owned_ships": get_empty_owned_ships_dict_for_year(2050), "tco": 0.0, "ghg": 0.0, "charter": 20, "total_fuel_cost_route": 0.0}}
+ALL_YEAR_DEFAULT_INPUTS = {2030: DEFAULT_INPUTS_2030, 2040: DEFAULT_INPUTS_2040, 2050: DEFAULT_INPUTS_2050}
 FALLBACK_OWNED_SHIP_CATEGORIES = OWNED_SHIP_CATEGORIES_BY_YEAR[2030]
-EMPTY_ROUTE_DEFAULTS = {
-    "owned_ships": {cat.lower().replace(' ', '_').replace('(','').replace(')',''): 0 for cat in FALLBACK_OWNED_SHIP_CATEGORIES},
-    "charter": 0, "tco": 0.0, "ghg": 0.0
-}
-
+EMPTY_ROUTE_DEFAULTS = {"owned_ships": {cat.lower().replace(' ', '_').replace('(','').replace(')',''): 0 for cat in FALLBACK_OWNED_SHIP_CATEGORIES}, "charter": 0, "tco": 0.0, "ghg": 0.0, "total_fuel_cost_route": 0.0}
+BENCHMARK_2024 = {"total_tco_fleet": 161.26, "total_ghg_fleet": 4.9052, "total_charter_cost_fleet": 1902.8, "total_fuel_cost_fleet": 743.81}
 
 # --- Helper Function for Formatting ---
 def format_value(value, decimal_places=2, is_currency=False, use_sig_figs_non_currency=False, sig_figs=2):
@@ -90,73 +48,71 @@ def format_value(value, decimal_places=2, is_currency=False, use_sig_figs_non_cu
         if is_currency: return f"${value:,.{decimal_places}f}"
         elif use_sig_figs_non_currency:
             if value == 0: return "0.00"
-            return f"{float(value):.{sig_figs}g}" # Using 'g' for significant figures
+            return f"{float(value):.{sig_figs}g}"
         else: return f"{value:,.{decimal_places}f}"
     except (ValueError, TypeError): return str(value)
 
 # --- Initialize Session State ---
 def initialize_session_state_once():
-    if 'app_initialized_fleet_v2' not in st.session_state: # New unique flag
-        st.session_state.app_initialized_fleet_v2 = True
+    if 'app_initialized_fleet_v9' not in st.session_state: # New unique flag
+        st.session_state.app_initialized_fleet_v9 = True
         st.session_state.selected_year = YEAR_OPTIONS[0]
         st.session_state.results = None
         st.session_state.show_results = False
-        st.session_state.reset_trigger_flag = False
+        st.session_state.reset_trigger_button_flag = False
 
         initial_year_to_load = st.session_state.selected_year
         defaults_for_init_year_master = ALL_YEAR_DEFAULT_INPUTS.get(initial_year_to_load, {})
-        for route_key in ROUTE_KEYS:
-            route_data = defaults_for_init_year_master.get(route_key, EMPTY_ROUTE_DEFAULTS)
-            st.session_state[f"charter_{route_key}"] = route_data['charter']
-            st.session_state[f"tco_{route_key}"] = route_data['tco']
-            st.session_state[f"ghg_{route_key}"] = route_data['ghg']
+        for route_key_init in ROUTE_KEYS:
+            route_data = defaults_for_init_year_master.get(route_key_init, EMPTY_ROUTE_DEFAULTS)
+            st.session_state[f"charter_{route_key_init}"] = route_data['charter']
+            st.session_state[f"tco_{route_key_init}"] = route_data['tco']
+            st.session_state[f"ghg_{route_key_init}"] = route_data['ghg']
+            st.session_state[f"fuel_cost_route_{route_key_init}"] = route_data.get('total_fuel_cost_route', 0.0)
             current_owned_categories = OWNED_SHIP_CATEGORIES_BY_YEAR.get(initial_year_to_load, FALLBACK_OWNED_SHIP_CATEGORIES)
             owned_ship_defaults_for_route = route_data.get("owned_ships", {})
             for ship_cat_display_name in current_owned_categories:
                 ship_cat_internal_key = ship_cat_display_name.lower().replace(' ', '_').replace('(','').replace(')','')
-                session_key = f"owned_{route_key}_{ship_cat_internal_key}"
+                session_key = f"owned_{route_key_init}_{ship_cat_internal_key}"
                 st.session_state[session_key] = owned_ship_defaults_for_route.get(ship_cat_internal_key, 0)
 initialize_session_state_once()
 
-# --- Process Reset (if triggered, AFTER set_page_config, BEFORE other st commands) ---
-if st.session_state.get('reset_trigger_flag', False):
+# --- Process Reset (if triggered) ---
+if st.session_state.get('reset_trigger_button_flag', False):
     year_to_reset = st.session_state.selected_year
-    # print(f"DEBUG: Processing reset for year {year_to_reset} at top of script.")
     defaults_for_year = ALL_YEAR_DEFAULT_INPUTS.get(year_to_reset, {})
     for route_key in ROUTE_KEYS:
         route_defaults = defaults_for_year.get(route_key, EMPTY_ROUTE_DEFAULTS)
         st.session_state[f"charter_{route_key}"] = route_defaults['charter']
         st.session_state[f"tco_{route_key}"] = route_defaults['tco']
         st.session_state[f"ghg_{route_key}"] = route_defaults['ghg']
+        st.session_state[f"fuel_cost_route_{route_key}"] = route_defaults.get('total_fuel_cost_route', 0.0)
         owned_ship_defaults_for_route = route_defaults.get("owned_ships", {})
         current_owned_categories_for_reset = OWNED_SHIP_CATEGORIES_BY_YEAR.get(year_to_reset, FALLBACK_OWNED_SHIP_CATEGORIES)
         for ship_cat_display_name in current_owned_categories_for_reset:
             ship_cat_internal_key = ship_cat_display_name.lower().replace(' ', '_').replace('(','').replace(')','')
             session_key = f"owned_{route_key}_{ship_cat_internal_key}"
             st.session_state[session_key] = owned_ship_defaults_for_route.get(ship_cat_internal_key, 0)
-    st.session_state.reset_trigger_flag = False
+    st.session_state.reset_trigger_button_flag = False
     st.session_state.results = None
     st.session_state.show_results = False
     st.success(f"All inputs reset to {year_to_reset} default values.")
-
 
 # --- Callbacks ---
 def clear_results_on_input_change():
     st.session_state.results = None
     st.session_state.show_results = False
 def trigger_reset_all_inputs_and_clear_results():
-    st.session_state.reset_trigger_flag = True
-    # Rerun will happen naturally.
+    st.session_state.reset_trigger_button_flag = True
 
 # --- App Layout ---
 st.title("Tanker Fleet Decision Support: Costs & Emissions")
 st.divider()
 
 # --- Input Section ---
-# (Keep the rest of the input section as is)
 st.sidebar.header("⚙️ Input Parameters")
 st.sidebar.info("Define fleet composition and scenario inputs.")
-selected_year_from_ui = st.sidebar.selectbox( # Renamed to avoid conflict
+selected_year_from_ui = st.sidebar.selectbox(
     "Select Target Year:", options=YEAR_OPTIONS, key='selected_year',
     on_change=clear_results_on_input_change
 )
@@ -176,19 +132,19 @@ for route_key, route_display_name in TANKER_ROUTES.items():
                 if session_key not in st.session_state: st.session_state[session_key] = 0
                 st.number_input(f"{ship_category_display_name}", min_value=0, step=1, key=session_key, on_change=clear_results_on_input_change)
 
-st.header("🚢 Route-Specific Data (TCO, GHG, Charter)")
-st.markdown("""<style>div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlock"] div[data-baseweb="block"] > label[data-baseweb="form-control-label"] {height: 4em; display: flex; align-items: center; justify-content: start; white-space: normal; overflow: hidden; margin-bottom: -0.7em;}</style>""", unsafe_allow_html=True)
+st.header("🚢 Route-Specific Data (TCO, GHG, Charter, Fuel Cost)")
+st.markdown("""<style>div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlock"] div[data-baseweb="block"] > label[data-baseweb="form-control-label"] {height: 4.5em; display: flex; align-items: center; justify-content: start; white-space: normal; overflow: hidden; margin-bottom: -0.8em;}</style>""", unsafe_allow_html=True)
 for key, display_name in TANKER_ROUTES.items():
     with st.expander(f"Data for: {display_name}"):
-        col_in1, col_in2, col_in3 = st.columns(3)
-        charter_key = f"charter_{key}"; tco_key = f"tco_{key}"; ghg_key = f"ghg_{key}"
+        col_in1, col_in2, col_in3, col_in4 = st.columns(4)
+        charter_key = f"charter_{key}"; tco_key = f"tco_{key}"; ghg_key = f"ghg_{key}"; fuel_cost_route_key = f"fuel_cost_route_{key}"
         with col_in1: st.number_input(f"Charter Vessels", min_value=0, step=1, key=charter_key, on_change=clear_results_on_input_change)
         with col_in2: st.number_input(f"Annualized TCO (Million USD)", min_value=0.0, step=0.01, format="%.5f", key=tco_key, help="Input from external analysis.", on_change=clear_results_on_input_change)
         with col_in3: st.number_input(f"Total GHG (Million Tons CO2e)", min_value=0.0, step=0.001, format="%.5f", key=ghg_key, help=f"Input from external analysis for {st.session_state.selected_year}.", on_change=clear_results_on_input_change)
+        with col_in4: st.number_input(f"Total Fuel Cost (Million USD)", min_value=0.0, step=0.01, format="%.5f", key=fuel_cost_route_key, help="Route-specific total fuel cost.", on_change=clear_results_on_input_change)
 st.divider()
 
 # --- Calculation Trigger ---
-# (Calculation logic remains the same)
 st.header("📊 Calculate & Analyze")
 if st.button("Run Analysis", type="primary"):
     current_year_calc = st.session_state.selected_year
@@ -196,6 +152,8 @@ if st.button("Run Analysis", type="primary"):
     route_level_data_list = []
     calculated_total_owned_vessels_all_routes = 0
     total_tco_fleet = 0.0; total_ghg_fleet = 0.0; total_charter_cost_fleet = 0.0
+    total_fleet_fuel_cost_from_routes = 0.0
+
     with st.spinner(f"Analyzing for {current_year_calc}..."):
         current_owned_ship_categories_for_sum = OWNED_SHIP_CATEGORIES_BY_YEAR.get(current_year_calc, [])
         for route_key_iter in ROUTE_KEYS:
@@ -212,85 +170,134 @@ if st.button("Run Analysis", type="primary"):
             charter_count = st.session_state[f"charter_{key}"]
             tco_val = st.session_state[f"tco_{key}"]
             ghg_val = st.session_state[f"ghg_{key}"]
+            fuel_cost_route_val = st.session_state[f"fuel_cost_route_{key}"]
             factors = current_year_factors.get(key)
             route_charter_cost = 0.0
             if factors and charter_count > 0: route_charter_cost = charter_count * factors["m1"] * factors["m2"]
             elif charter_count > 0: st.warning(f"Charter factors missing for {display_name}.")
             total_charter_cost_fleet += route_charter_cost; total_tco_fleet += tco_val; total_ghg_fleet += ghg_val
-            route_level_data_list.append({"Route": display_name, "Total Owned Ships": route_owned_ships_sum, "Charter Vessels": charter_count, "TCO (M USD)": tco_val, "GHG (M Tons CO2e)": ghg_val, "Charter Cost (M USD)": route_charter_cost})
+            total_fleet_fuel_cost_from_routes += fuel_cost_route_val
+            route_level_data_list.append({"Route": display_name, "Total Owned Ships": route_owned_ships_sum, "Charter Vessels": charter_count, "TCO (M USD)": tco_val, "GHG (M Tons CO2e)": ghg_val, "Charter Cost (M USD)": route_charter_cost, "Total Fuel Cost (M USD)": fuel_cost_route_val})
     total_investment_fleet = total_tco_fleet + total_charter_cost_fleet
-    st.session_state.results = {"route_data_df": pd.DataFrame(route_level_data_list), "total_tco_fleet": total_tco_fleet, "total_ghg_fleet": total_ghg_fleet, "total_charter_cost_fleet": total_charter_cost_fleet, "total_investment_fleet": total_investment_fleet, "calculated_total_owned_vessels_all_routes": calculated_total_owned_vessels_all_routes, "calculated_for_year": current_year_calc}
+    st.session_state.results = {"route_data_df": pd.DataFrame(route_level_data_list), "total_tco_fleet": total_tco_fleet, "total_ghg_fleet": total_ghg_fleet, "total_charter_cost_fleet": total_charter_cost_fleet, "total_investment_fleet": total_investment_fleet, "calculated_total_owned_vessels_all_routes": calculated_total_owned_vessels_all_routes, "total_annual_fuel_expenditure_fleet_million": total_fleet_fuel_cost_from_routes, "calculated_for_year": current_year_calc}
     st.session_state.show_results = True
     st.success(f"Analysis Complete for {current_year_calc}!")
 
 st.divider()
 
 # --- Output Section ---
-# (Output formatting fixes as requested)
 st.header("📈 Analysis Outputs")
 if st.session_state.show_results and st.session_state.results:
     results = st.session_state.results; calc_year = results["calculated_for_year"]
     st.subheader(f"Fleet Summary (Year: {calc_year})")
-    # Metrics in two rows
-    row1_metrics_cols = st.columns(3)
-    with row1_metrics_cols[0]: st.metric(label="Total Owned Vessels (All Routes)", value=f"{results['calculated_total_owned_vessels_all_routes']}")
-    with row1_metrics_cols[1]: st.metric(label="Total TCO (Fleet, M USD)", value=f"{format_value(results['total_tco_fleet'], 2, True, sig_figs=2)}") # Use sig_figs for metrics
-    with row1_metrics_cols[2]: st.metric(label="Total GHG Emissions (Fleet, M Tons CO2e)", value=f"{format_value(results['total_ghg_fleet'], 2, use_sig_figs_non_currency=True, sig_figs=2)}")
+    # --- Metrics with updated labels and 2 sig figs ---
+    # Using columns to attempt left alignment for a group of metrics
+    cols_metrics_r1 = st.columns(3)
+    with cols_metrics_r1[0]: st.metric(label="Total Owned Vessels (All Routes)", value=f"{results['calculated_total_owned_vessels_all_routes']}")
+    with cols_metrics_r1[1]: st.metric(label="Total TCO (Fleet, M USD)", value=f"{format_value(results['total_tco_fleet'], decimal_places=2, is_currency=True, use_sig_figs_non_currency=True, sig_figs=2)}")
+    with cols_metrics_r1[2]: st.metric(label="Total GHG Emissions (Fleet, M Tons CO2e)", value=f"{format_value(results['total_ghg_fleet'], decimal_places=2, use_sig_figs_non_currency=True, sig_figs=2)}")
 
-    row2_metrics_cols = st.columns(2)
-    with row2_metrics_cols[0]: st.metric(label="Total Charter Cost (Fleet, M USD)", value=f"{format_value(results['total_charter_cost_fleet'], 2, True, sig_figs=2)}")
-    with row2_metrics_cols[1]: st.metric(label="Total Investment (Fleet, M USD)", value=f"{format_value(results['total_investment_fleet'], 2, True, sig_figs=2)}")
+    cols_metrics_r2 = st.columns(3) # Create another row for alignment
+    with cols_metrics_r2[0]: st.metric(label="Total Charter Cost (Fleet, M USD)", value=f"{format_value(results['total_charter_cost_fleet'], decimal_places=2, is_currency=True, use_sig_figs_non_currency=True, sig_figs=2)}")
+    with cols_metrics_r2[1]: st.metric(label="Total Fuel Cost (Fleet, M USD)", value=f"{format_value(results['total_annual_fuel_expenditure_fleet_million'], decimal_places=2, is_currency=True, use_sig_figs_non_currency=True, sig_figs=2)}")
+    with cols_metrics_r2[2]: st.metric(label="Total Investment (TCO+Charter, M USD)", value=f"{format_value(results['total_investment_fleet'], decimal_places=2, is_currency=True, use_sig_figs_non_currency=True, sig_figs=2)}")
     st.divider()
 
-    st.subheader("Route-Level Summary")
+    st.subheader("Route-Level Summary Table")
     df_routes = results["route_data_df"]
     if not df_routes.empty:
-        df_routes_display = df_routes[(df_routes["Total Owned Ships"] > 0) | (df_routes["Charter Vessels"] > 0) | (abs(df_routes["TCO (M USD)"]) > 1e-9) | (abs(df_routes["GHG (M Tons CO2e)"]) > 1e-9) | (abs(df_routes["Charter Cost (M USD)"]) > 1e-9)]
-        column_order = ["Route", "Total Owned Ships", "Charter Vessels", "TCO (M USD)", "GHG (M Tons CO2e)", "Charter Cost (M USD)"]
+        df_routes_display = df_routes[(df_routes["Total Owned Ships"] > 0) | (df_routes["Charter Vessels"] > 0) | (abs(df_routes["TCO (M USD)"]) > 1e-9) | (abs(df_routes["GHG (M Tons CO2e)"]) > 1e-9) | (abs(df_routes["Charter Cost (M USD)"]) > 1e-9) | (abs(df_routes["Total Fuel Cost (M USD)"]) > 1e-9) ]
+        column_order = ["Route", "Total Owned Ships", "Charter Vessels", "TCO (M USD)", "Total Fuel Cost (M USD)", "Charter Cost (M USD)", "GHG (M Tons CO2e)"]
         df_routes_display = df_routes_display.reindex(columns=column_order, fill_value=0)
         st.dataframe(df_routes_display.style.format({
             "Total Owned Ships": "{:,.0f}", "Charter Vessels": "{:,.0f}",
-            "TCO (M USD)": lambda x: format_value(x, 2, True, sig_figs=2), # More consistent sig fig
-            "GHG (M Tons CO2e)": lambda x: format_value(x, 2, use_sig_figs_non_currency=True, sig_figs=2),
-            "Charter Cost (M USD)": lambda x: format_value(x, 2, True, sig_figs=2)
+            "TCO (M USD)": lambda x: format_value(x, 2, True, sig_figs=2), # Keep sig figs for consistency
+            "Total Fuel Cost (M USD)": lambda x: format_value(x, 2, True, sig_figs=2),
+            "Charter Cost (M USD)": lambda x: format_value(x, 2, True, sig_figs=2),
+            "GHG (M Tons CO2e)": lambda x: format_value(x, 2, use_sig_figs_non_currency=True, sig_figs=2) # Use sig figs
         }), use_container_width=True)
     else: st.info("No route data.")
     st.divider()
 
     st.subheader("Visual Insights")
-    viz_col1, viz_col2 = st.columns(2)
-    with viz_col1:
+    viz_r1c1, viz_r1c2, viz_r1c3 = st.columns(3)
+    with viz_r1c1:
         st.markdown("**Annualized TCO by Route (M USD)**")
         if not df_routes[abs(df_routes['TCO (M USD)']) > 1e-9].empty:
             fig_tco = px.bar(df_routes, x='Route', y='TCO (M USD)', text_auto='.2f', title="TCO by Route")
-            fig_tco.update_layout(xaxis_tickangle=-45, yaxis_title="TCO (Million USD)", height=400); st.plotly_chart(fig_tco, use_container_width=True)
+            fig_tco.update_layout(xaxis_tickangle=-45, yaxis_title="TCO (Million USD)", height=350, margin=dict(b=100)); st.plotly_chart(fig_tco, use_container_width=True)
         else: st.caption("No TCO data.")
-        st.markdown("**Calculated Charter Cost by Route (M USD)**")
-        if not df_routes[abs(df_routes['Charter Cost (M USD)']) > 1e-9].empty:
-            fig_charter_cost = px.bar(df_routes, x='Route', y='Charter Cost (M USD)', text_auto='.2f', title="Charter Cost by Route")
-            fig_charter_cost.update_layout(xaxis_tickangle=-45, yaxis_title="Charter Cost (Million USD)", height=400); st.plotly_chart(fig_charter_cost, use_container_width=True)
-        else: st.caption("No charter costs.")
         st.markdown("**Owned vs. Chartered Vessels by Route**")
         df_own_charter = df_routes[['Route', 'Total Owned Ships', 'Charter Vessels']]; df_own_charter_melted = df_own_charter.melt(id_vars=['Route'], value_vars=['Total Owned Ships', 'Charter Vessels'], var_name='Vessel Source', value_name='Number of Vessels')
         df_own_charter_plot = df_own_charter_melted[df_own_charter_melted['Number of Vessels'] > 0]
         if not df_own_charter_plot.empty:
             fig_own_charter = px.bar(df_own_charter_plot, x='Route', y='Number of Vessels', color='Vessel Source', barmode='group', text_auto=True, title="Owned vs. Chartered Vessels")
-            fig_own_charter.update_layout(xaxis_tickangle=-45, yaxis_title="Number of Vessels", height=400); fig_own_charter.update_traces(texttemplate='%{y:.0f}')
+            fig_own_charter.update_layout(xaxis_tickangle=-45, yaxis_title="Number of Vessels", height=350, margin=dict(b=100)); fig_own_charter.update_traces(texttemplate='%{y:.0f}')
             st.plotly_chart(fig_own_charter, use_container_width=True)
         else: st.caption("No owned/chartered data.")
-    with viz_col2:
+    with viz_r1c2:
         st.markdown("**GHG Emissions by Route (M Tons CO2e)**")
         if not df_routes[abs(df_routes['GHG (M Tons CO2e)']) > 1e-9].empty:
             fig_ghg = px.bar(df_routes, x='Route', y='GHG (M Tons CO2e)', text_auto='.2f', title="GHG Emissions by Route")
-            fig_ghg.update_layout(xaxis_tickangle=-45, yaxis_title="GHG (Million Tons CO2e)", height=400); st.plotly_chart(fig_ghg, use_container_width=True)
+            fig_ghg.update_layout(xaxis_tickangle=-45, yaxis_title="GHG (Million Tons CO2e)", height=350, margin=dict(b=100)); st.plotly_chart(fig_ghg, use_container_width=True)
         else: st.caption("No GHG data.")
-        st.markdown("**Cost Comparison: Charter vs. TCO by Route (M USD)**")
-        df_cost_comp = df_routes[((abs(df_routes['Charter Cost (M USD)']) > 1e-9) | (abs(df_routes['TCO (M USD)']) > 1e-9))]
-        if not df_cost_comp.empty:
-            df_melted_costs = df_cost_comp.melt(id_vars=['Route'], value_vars=['TCO (M USD)', 'Charter Cost (M USD)'], var_name='Cost Type', value_name='Cost (Million USD)')
-            fig_cost_comp = px.bar(df_melted_costs, x='Route', y='Cost (Million USD)', color='Cost Type', barmode='group', text_auto='.2f', title="TCO vs. Charter Cost")
-            fig_cost_comp.update_layout(xaxis_tickangle=-45, yaxis_title="Cost (Million USD)", height=400); st.plotly_chart(fig_cost_comp, use_container_width=True)
+        st.markdown("**Calculated Charter Cost by Route (M USD)**")
+        if not df_routes[abs(df_routes['Charter Cost (M USD)']) > 1e-9].empty:
+            fig_charter_cost = px.bar(df_routes, x='Route', y='Charter Cost (M USD)', text_auto='.2f', title="Charter Cost by Route")
+            fig_charter_cost.update_layout(xaxis_tickangle=-45, yaxis_title="Charter Cost (Million USD)", height=350, margin=dict(b=100)); st.plotly_chart(fig_charter_cost, use_container_width=True)
+        else: st.caption("No charter costs.")
+    with viz_r1c3:
+        st.markdown("**Total Fuel Cost by Route (M USD)**")
+        if not df_routes[abs(df_routes['Total Fuel Cost (M USD)']) > 1e-9].empty:
+            fig_fuel_route = px.bar(df_routes, x='Route', y='Total Fuel Cost (M USD)', text_auto='.2f', title="Fuel Cost by Route")
+            fig_fuel_route.update_layout(xaxis_tickangle=-45, yaxis_title="Fuel Cost (M USD)", height=350, margin=dict(b=100))
+            st.plotly_chart(fig_fuel_route, use_container_width=True)
+        else: st.caption("No route fuel cost data.")
+        st.markdown("**Cost Comparison: TCO, Charter, Fuel by Route (M USD)**")
+        df_cost_comp_all = df_routes[((abs(df_routes['Charter Cost (M USD)']) > 1e-9) | (abs(df_routes['TCO (M USD)']) > 1e-9) | (abs(df_routes['Total Fuel Cost (M USD)']) > 1e-9) )]
+        if not df_cost_comp_all.empty:
+            df_melted_costs_all = df_cost_comp_all.melt(id_vars=['Route'], value_vars=['TCO (M USD)', 'Charter Cost (M USD)', 'Total Fuel Cost (M USD)'], var_name='Cost Type', value_name='Cost (Million USD)')
+            fig_cost_comp_all = px.bar(df_melted_costs_all, x='Route', y='Cost (Million USD)', color='Cost Type', barmode='group', text_auto='.2f', title="Key Costs by Route")
+            fig_cost_comp_all.update_layout(xaxis_tickangle=-45, yaxis_title="Cost (Million USD)", height=350, margin=dict(b=100)); st.plotly_chart(fig_cost_comp_all, use_container_width=True)
         else: st.caption("No cost data for comparison.")
+
+    st.divider()
+    # --- Benchmark Comparison Section (with % change in hover) ---
+    st.subheader(f"Benchmark Comparison ({calc_year} vs. 2024)")
+    bench_col1, bench_col2, bench_col3, bench_col4 = st.columns(4)
+    plot_height_bench = 320 # Adjusted height
+
+    def create_benchmark_chart(metric_name, scenario_value, benchmark_value, unit_label):
+        if benchmark_value == 0: # Avoid division by zero
+            percent_change = "N/A (Benchmark is 0)"
+        else:
+            percent_change_val = ((scenario_value - benchmark_value) / benchmark_value) * 100
+            percent_change = f"{percent_change_val:+.1f}%" # Add + sign for positive changes
+
+        data_bench = [
+            {'Category': '2024 Benchmark', 'Value': benchmark_value, '% Change vs 2024': 'Benchmark'},
+            {'Category': f'{calc_year} Scenario', 'Value': scenario_value, '% Change vs 2024': percent_change}
+        ]
+        df_bench = pd.DataFrame(data_bench)
+        fig_b = px.bar(df_bench, x='Category', y='Value', text_auto='.2f',
+                       title=f"Total {metric_name} ({unit_label})", height=plot_height_bench,
+                       hover_data={'Category': True, 'Value': ':.2f', '% Change vs 2024': True})
+        fig_b.update_layout(xaxis_title=None, yaxis_title=unit_label)
+        return fig_b
+
+    with bench_col1:
+        fig = create_benchmark_chart("TCO", results['total_tco_fleet'], BENCHMARK_2024['total_tco_fleet'], "M USD")
+        st.plotly_chart(fig, use_container_width=True)
+    with bench_col2:
+        fig = create_benchmark_chart("GHG Emissions", results['total_ghg_fleet'], BENCHMARK_2024['total_ghg_fleet'], "M Tons CO2e")
+        st.plotly_chart(fig, use_container_width=True)
+    with bench_col3:
+        fig = create_benchmark_chart("Charter Cost", results['total_charter_cost_fleet'], BENCHMARK_2024['total_charter_cost_fleet'], "M USD")
+        st.plotly_chart(fig, use_container_width=True)
+    with bench_col4:
+        fig = create_benchmark_chart("Fuel Cost", results['total_annual_fuel_expenditure_fleet_million'], BENCHMARK_2024['total_fuel_cost_fleet'], "M USD")
+        st.plotly_chart(fig, use_container_width=True)
+
     with st.expander("Exploratory: GHG vs. Charter Vessels (Bubble Size by TCO)"):
         df_scatter = df_routes[(df_routes['Charter Vessels'] > 0) & (abs(df_routes['GHG (M Tons CO2e)']) > 1e-9)]
         if not df_scatter.empty:
