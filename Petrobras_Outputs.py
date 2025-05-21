@@ -61,7 +61,7 @@ DEFAULT_INPUTS_2030 = {"vlcc_china": {
     "tco": 31.0053, "ghg": 0.12959, "charter": 21, "total_fuel_cost_route": 16.41581277}}
 DEFAULT_INPUTS_2040 = {"vlcc_china": {
     "owned_ships": {"diesel_ships": 4, "b50_ships": 1, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships": 0,
-                    "methane_ships": 12, "vlsfo_occs_ships": 0, "b50_eet_ships": 0}, "tco": 848.85, "ghg": 0.64,
+                    "methane_ships": 13, "vlsfo_occs_ships": 0, "b50_eet_ships": 0}, "tco": 848.85, "ghg": 0.64,
     "charter": 5, "total_fuel_cost_route": 427.8787256}, "suez_seasia": {
     "owned_ships": {"diesel_ships": 2, "b50_ships": 2, "methanol_ships": 0, "ammonia_ships": 0, "blueh2_ships": 0,
                     "methane_ships": 8, "vlsfo_occs_ships": 0, "b50_eet_ships": 0}, "tco": 357.2, "ghg": 0.2,
