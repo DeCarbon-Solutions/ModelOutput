@@ -273,7 +273,7 @@ if st.session_state.show_results and st.session_state.results:
     fin_cols = st.columns(3)
     with fin_cols[0]: st.metric(label=f"Assumed Initial Investment (M USD)", value=f"{format_value(results.get('initial_investment_for_npv', 0.0), decimal_places=2, is_currency=True)}")
     with fin_cols[1]: st.metric(label="Projected Payback Period", value=results.get('payback_period_projected', "N/A"))
-    with fin_cols[2]: st.metric(label=f"Projected NPV @ {st.session_state.discount_rate_percent}% (M USD)", value=results.get('npv_projected', "N/A"))
+
     st.divider()
     st.subheader("Route-Level Summary Table (Scenario Year Snapshot)")
     df_routes = results["route_data_df"]
